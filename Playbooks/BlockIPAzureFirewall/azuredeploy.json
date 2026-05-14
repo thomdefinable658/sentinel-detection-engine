@@ -1,0 +1,111 @@
+{
+  "$schema": "https://schema.management.azure.com/schemas/2019-04-01/deploymentTemplate.json#",
+  "contentVersion": "1.0.0.0",
+  "metadata": {
+    "title": "BlockIPAzureFirewall",
+    "description": "On Sentinel incident creation, every IP entity that is public is added to an Azure Firewall IP Group used by a deny rule. Posts an audit comment back to Sentinel and tags the incident with the IP Group revision.",
+    "prerequisites": "An existing Azure Firewall + a network rule that DENIES traffic from the named IP Group. The Logic App identity must have 'Network Contributor' over the IP Group.",
+    "lastUpdateTime": "2026-05-14",
+    "author": { "name": "Sandeep Mothukuri" }
+  },
+  "parameters": {
+    "PlaybookName": { "type": "string", "defaultValue": "BlockIPAzureFirewall" },
+    "SentinelConnectionName": { "type": "string", "defaultValue": "azuresentinel" },
+    "IpGroupResourceId": {
+      "type": "string",
+      "metadata": { "description": "Full resource ID of the Azure Firewall IP Group consumed by the deny rule." }
+    }
+  },
+  "variables": {
+    "SentConnId": "[resourceId('Microsoft.Web/connections', parameters('SentinelConnectionName'))]"
+  },
+  "resources": [
+    {
+      "type": "Microsoft.Logic/workflows",
+      "apiVersion": "2019-05-01",
+      "name": "[parameters('PlaybookName')]",
+      "location": "[resourceGroup().location]",
+      "identity": { "type": "SystemAssigned" },
+      "tags": { "hidden-SentinelTemplateName": "BlockIPAzureFirewall", "hidden-SentinelTemplateVersion": "1.0.0" },
+      "properties": {
+        "state": "Enabled",
+        "definition": {
+          "$schema": "https://schema.management.azure.com/providers/Microsoft.Logic/schemas/2016-06-01/workflowdefinition.json#",
+          "contentVersion": "1.0.0.0",
+          "parameters": {
+            "$connections": { "defaultValue": {}, "type": "Object" },
+            "IpGroupResourceId": { "defaultValue": "[parameters('IpGroupResourceId')]", "type": "String" }
+          },
+          "triggers": {
+            "Microsoft_Sentinel_incident": {
+              "type": "ApiConnectionWebhook",
+              "inputs": {
+                "body": { "callback_url": "@listCallbackUrl()" },
+                "host": { "connection": { "name": "@parameters('$connections')['azuresentinel']['connectionId']" } },
+                "path": "/incident-creation"
+              }
+            }
+          },
+          "actions": {
+            "Entities_-_Get_IPs": {
+              "type": "ApiConnection",
+              "inputs": {
+                "body": "@triggerBody()?['object']?['properties']?['relatedEntities']",
+                "host": { "connection": { "name": "@parameters('$connections')['azuresentinel']['connectionId']" } },
+                "method": "post",
+                "path": "/entities/ip"
+              }
+            },
+            "Get_IP_Group_Current": {
+              "runAfter": { "Entities_-_Get_IPs": ["Succeeded"] },
+              "type": "Http",
+              "inputs": {
+                "method": "GET",
+                "uri": "https://management.azure.com@{parameters('IpGroupResourceId')}?api-version=2023-09-01",
+                "authentication": { "type": "ManagedServiceIdentity", "audience": "https://management.azure.com/" }
+              }
+            },
+            "Compose_Merged_IPs": {
+              "runAfter": { "Get_IP_Group_Current": ["Succeeded"] },
+              "type": "Compose",
+              "inputs": "@union(body('Get_IP_Group_Current')?['properties']?['ipAddresses'], select(filter(body('Entities_-_Get_IPs')?['IPs'], (x) => not(startsWith(x?['Address'], '10.')) && not(startsWith(x?['Address'], '192.168.')) && not(startsWith(x?['Address'], '172.16.'))), (y) => concat(y?['Address'], '/32')))"
+            },
+            "Update_IP_Group": {
+              "runAfter": { "Compose_Merged_IPs": ["Succeeded"] },
+              "type": "Http",
+              "inputs": {
+                "method": "PUT",
+                "uri": "https://management.azure.com@{parameters('IpGroupResourceId')}?api-version=2023-09-01",
+                "authentication": { "type": "ManagedServiceIdentity", "audience": "https://management.azure.com/" },
+                "body": {
+                  "location": "@{body('Get_IP_Group_Current')?['location']}",
+                  "properties": { "ipAddresses": "@outputs('Compose_Merged_IPs')" }
+                }
+              }
+            },
+            "Sentinel_Comment_Blocked": {
+              "runAfter": { "Update_IP_Group": ["Succeeded","Failed"] },
+              "type": "ApiConnection",
+              "inputs": {
+                "host": { "connection": { "name": "@parameters('$connections')['azuresentinel']['connectionId']" } },
+                "method": "post",
+                "path": "/Incidents/Comment",
+                "body": {
+                  "incidentArmId": "@triggerBody()?['object']?['id']",
+                  "message": "Added IP(s) to deny IP Group @{parameters('IpGroupResourceId')}. New IP count: @{length(outputs('Compose_Merged_IPs'))}."
+                }
+              }
+            }
+          }
+        },
+        "parameters": {
+          "$connections": {
+            "value": {
+              "azuresentinel": { "id": "[concat('/subscriptions/', subscription().subscriptionId, '/providers/Microsoft.Web/locations/', resourceGroup().location, '/managedApis/azuresentinel')]", "connectionId": "[variables('SentConnId')]", "connectionName": "azuresentinel" }
+            }
+          }
+        }
+      }
+    }
+  ]
+}

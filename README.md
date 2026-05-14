@@ -58,10 +58,12 @@ Most public Sentinel content is either (a) a single hand-written query in a blog
 | Scheduled analytic rules | 12 | [`Detections/`](Detections/) |
 | Hunting queries | 10 | [`Hunting Queries/`](Hunting%20Queries/) |
 | Workbook (L3 Triage Dashboard) | 1 | [`Workbooks/`](Workbooks/) |
-| Logic App playbook | 1 | [`Playbooks/`](Playbooks/) |
+| Logic App playbooks (SOAR) | 4 | [`Playbooks/`](Playbooks/) |
 | ATT&CK Navigator layer | 1 | [`attack-navigator/`](attack-navigator/) |
 | Atomic Red Team mapping | 22 tests | [`tests/atomics.md`](tests/atomics.md) |
-| CI validation workflow | 1 | [`.github/workflows/validate.yml`](.github/workflows/validate.yml) |
+| Workflow documentation (IR runbook, triage SOP, escalation matrix, tuning log, SOAR flow, maturity assessment) | 6 | [`docs/workflows/`](docs/workflows/) |
+| CI workflows (validate, PR diff report, release) | 3 | [`.github/workflows/`](.github/workflows/) |
+| Sigma → KQL converter | 1 | [`scripts/sigma_to_kql.py`](scripts/sigma_to_kql.py) |
 
 ### Coverage snapshot
 
@@ -177,6 +179,46 @@ sentinel-hunt-pack/
 ├── coverage.md                 # auto-generated ATT&CK matrix
 └── README.md
 ```
+
+## SOAR orchestration
+
+Four Logic App playbooks ship with the pack. They compose into the decision pipeline documented in [`docs/workflows/soar-decision-flow.md`](docs/workflows/soar-decision-flow.md):
+
+| Playbook | Trigger | Action |
+|---|---|---|
+| [AutoEnrichDisableUser](Playbooks/AutoEnrichDisableUser/) | Any incident with IP entities | VT + AbuseIPDB enrichment; disables Entra ID user above confidence threshold |
+| [IsolateDeviceMDE](Playbooks/IsolateDeviceMDE/) | Incidents from `MDE_*` rules | Network-isolates the device via Defender for Endpoint |
+| [BlockIPAzureFirewall](Playbooks/BlockIPAzureFirewall/) | TI-tagged incidents | Adds public IPs to a deny IP Group on Azure Firewall |
+| [CreateServiceNowTicket](Playbooks/CreateServiceNowTicket/) | Severity High / Critical | Opens an INC ticket, severity-mapped, with cross-linking |
+
+## SOC workflow documentation
+
+The repo is more than a rule list — it ships with the documentation an L3 analyst expects:
+
+- [Incident response runbook](docs/workflows/ir-runbook.md) — SANS / NIST 800-61r2 phases applied to this pack
+- [Triage SOP](docs/workflows/triage-sop.md) — L1 → L2 → L3 hand-off with disposition labels
+- [Escalation matrix](docs/workflows/escalation-matrix.md) — who gets paged, when, and how
+- [SOAR decision flow](docs/workflows/soar-decision-flow.md) — Mermaid diagram + per-rule automation matrix
+- [Detection tuning log](docs/workflows/tuning-log.md) — open + closed tuning entries with PR links
+- [Maturity self-assessment](docs/workflows/maturity-assessment.md) — 10-dimension SOC maturity scoring
+
+## Detection lifecycle (CI / CD)
+
+| Workflow | Trigger | What it does |
+|---|---|---|
+| [validate](.github/workflows/validate.yml) | Every push + PR | yamllint, schema + UUID + ATT&CK + KQL sanity, coverage-drift check |
+| [pr-detection-report](.github/workflows/pr-detection-report.yml) | PR touches detection files | Posts a sticky PR comment summarising rule diffs, version bumps, and lint warnings |
+| [release](.github/workflows/release.yml) | Push of `v*.*.*` tag | Validates, packs rules into a tarball with SHA-256, generates changelog, publishes GitHub Release |
+
+## Importing Sigma rules
+
+For one-off rules from the public Sigma project, use the bundled converter:
+
+```bash
+python scripts/sigma_to_kql.py path/to/proc_creation_susp_powershell.yml
+```
+
+Output is a hand-tunable Defender XDR-flavoured KQL block with ATT&CK tags preserved as comments. Not a full pySigma replacement — it handles the common `process_creation`, `network_connection`, `image_load`, and `registry_event` categories.
 
 ## Roadmap
 
