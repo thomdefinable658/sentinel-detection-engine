@@ -1,0 +1,50 @@
+id: 8a9d3f0c-1b2e-4d6a-9c11-7f4e0c2b8a03
+name: Entra ID - Successful Legacy Auth Sign-In
+description: |
+  Detects successful sign-ins over legacy authentication protocols
+  (POP, IMAP, SMTP AUTH, MAPI, Exchange ActiveSync without modern auth, etc.).
+  Legacy auth bypasses Conditional Access and MFA and is the #1 vector for
+  password spray. Successful legacy auth is almost always malicious in 2026
+  estates that have rolled out modern auth.
+severity: High
+status: Available
+requiredDataConnectors:
+  - connectorId: AzureActiveDirectory
+    dataTypes:
+      - SigninLogs
+queryFrequency: 1h
+queryPeriod: 1h
+triggerOperator: gt
+triggerThreshold: 0
+tactics:
+  - InitialAccess
+  - DefenseEvasion
+relevantTechniques:
+  - T1110
+  - T1078.004
+query: |
+  let legacy_clients = dynamic([
+    "Other clients; POP",
+    "Other clients; IMAP",
+    "Other clients; SMTP",
+    "Other clients; MAPI",
+    "Other clients; Exchange ActiveSync",
+    "Authenticated SMTP",
+    "Exchange Web Services",
+    "AutoDiscover"
+  ]);
+  SigninLogs
+  | where ResultType == 0
+  | where ClientAppUsed in (legacy_clients)
+  | project TimeGenerated, UserPrincipalName, IPAddress, ClientAppUsed,
+            AppDisplayName, UserAgent, Location
+entityMappings:
+  - entityType: Account
+    fieldMappings:
+      - identifier: FullName
+        columnName: UserPrincipalName
+  - entityType: IP
+    fieldMappings:
+      - identifier: Address
+        columnName: IPAddress
+version: 1.0.0

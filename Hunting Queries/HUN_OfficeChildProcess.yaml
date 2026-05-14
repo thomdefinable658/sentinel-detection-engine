@@ -1,0 +1,26 @@
+id: 9b1a4e0d-2c3f-4e7b-8d22-8f5e1d3c9b06
+name: HUN - Office Apps Spawning Script Interpreters
+description: |
+  Hypothesis - Macro / template-injection / DLL-hijack payloads cause winword,
+  excel, powerpnt, outlook, msaccess, mspub, visio, onenote to spawn cmd,
+  powershell, wscript, cscript, mshta, rundll32, regsvr32, bitsadmin, certutil.
+tactics:
+  - Execution
+  - InitialAccess
+relevantTechniques:
+  - T1566.001
+  - T1059
+requiredDataConnectors:
+  - connectorId: MicrosoftThreatProtection
+    dataTypes:
+      - DeviceProcessEvents
+query: |
+  let office_parents = dynamic(["winword.exe","excel.exe","powerpnt.exe","outlook.exe","msaccess.exe","mspub.exe","visio.exe","onenote.exe","onenotem.exe"]);
+  let suspicious_children = dynamic(["cmd.exe","powershell.exe","pwsh.exe","wscript.exe","cscript.exe","mshta.exe","rundll32.exe","regsvr32.exe","bitsadmin.exe","certutil.exe","installutil.exe","msbuild.exe","hh.exe"]);
+  DeviceProcessEvents
+  | where TimeGenerated > ago(24h)
+  | where InitiatingProcessFileName in~ (office_parents)
+  | where FileName in~ (suspicious_children)
+  | project TimeGenerated, DeviceName, AccountName, InitiatingProcessFileName,
+            InitiatingProcessCommandLine, FileName, ProcessCommandLine
+version: 1.0.0

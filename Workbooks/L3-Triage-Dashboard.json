@@ -1,0 +1,95 @@
+{
+  "version": "Notebook/1.0",
+  "items": [
+    {
+      "type": 1,
+      "content": {
+        "json": "# L3 Triage Dashboard\nIncident funnel, top entities, ATT&CK coverage, and detection performance across the last 24 hours.\n\n*Author: Sandeep Mothukuri — part of [sentinel-hunt-pack](https://github.com/sandeepmothukuri/sentinel-hunt-pack)*"
+      },
+      "name": "Header"
+    },
+    {
+      "type": 9,
+      "content": {
+        "version": "KqlParameterItem/1.0",
+        "parameters": [
+          {
+            "id": "timerange",
+            "version": "KqlParameterItem/1.0",
+            "name": "TimeRange",
+            "type": 4,
+            "value": { "durationMs": 86400000 },
+            "typeSettings": {
+              "selectableValues": [
+                { "durationMs": 3600000 },
+                { "durationMs": 14400000 },
+                { "durationMs": 86400000 },
+                { "durationMs": 604800000 }
+              ]
+            }
+          }
+        ],
+        "style": "pills",
+        "queryType": 0
+      },
+      "name": "Parameters"
+    },
+    {
+      "type": 3,
+      "content": {
+        "version": "KqlItem/1.0",
+        "query": "SecurityIncident\n| where TimeGenerated {TimeRange}\n| summarize Incidents = dcount(IncidentNumber) by Severity\n| order by Severity asc",
+        "size": 3,
+        "title": "Incidents by severity",
+        "visualization": "piechart"
+      },
+      "name": "IncidentsBySeverity"
+    },
+    {
+      "type": 3,
+      "content": {
+        "version": "KqlItem/1.0",
+        "query": "SecurityAlert\n| where TimeGenerated {TimeRange}\n| summarize Alerts = count() by AlertName\n| top 10 by Alerts desc",
+        "size": 0,
+        "title": "Top 10 firing detections",
+        "visualization": "barchart"
+      },
+      "name": "TopDetections"
+    },
+    {
+      "type": 3,
+      "content": {
+        "version": "KqlItem/1.0",
+        "query": "SecurityAlert\n| where TimeGenerated {TimeRange}\n| mv-expand t = todynamic(Tactics)\n| summarize Alerts = count() by Tactic = tostring(t)\n| order by Alerts desc",
+        "size": 0,
+        "title": "Alerts per MITRE ATT&CK tactic",
+        "visualization": "barchart"
+      },
+      "name": "TacticHeatmap"
+    },
+    {
+      "type": 3,
+      "content": {
+        "version": "KqlItem/1.0",
+        "query": "SecurityAlert\n| where TimeGenerated {TimeRange}\n| extend Entities = parse_json(Entities)\n| mv-expand e = Entities\n| extend Type = tostring(e.Type), Value = coalesce(tostring(e.Name), tostring(e.Address), tostring(e.HostName))\n| where isnotempty(Value)\n| summarize Hits = count() by Type, Value\n| top 20 by Hits desc",
+        "size": 0,
+        "title": "Top entities (accounts, hosts, IPs)",
+        "visualization": "table"
+      },
+      "name": "TopEntities"
+    },
+    {
+      "type": 3,
+      "content": {
+        "version": "KqlItem/1.0",
+        "query": "SecurityIncident\n| where TimeGenerated {TimeRange}\n| extend MTTA_min = datetime_diff('minute', FirstActivityTime, CreatedTime)\n| extend MTTR_min = datetime_diff('minute', ClosedTime, CreatedTime)\n| summarize MTTA = avg(MTTA_min), MTTR = avg(MTTR_min) by Severity",
+        "size": 0,
+        "title": "MTTA / MTTR by severity (minutes)",
+        "visualization": "table"
+      },
+      "name": "MTTA_MTTR"
+    }
+  ],
+  "fallbackResourceIds": [],
+  "$schema": "https://github.com/Microsoft/Application-Insights-Workbooks/blob/master/schema/workbook.json"
+}

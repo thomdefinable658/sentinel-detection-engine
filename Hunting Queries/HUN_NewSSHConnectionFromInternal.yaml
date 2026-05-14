@@ -1,0 +1,34 @@
+id: 9b1a4e0d-2c3f-4e7b-8d22-8f5e1d3c9b0a
+name: HUN - Lateral SSH/RDP From Workstation
+description: |
+  Hypothesis - Standard end-user workstations should almost never initiate SSH
+  (22) or RDP (3389) to other internal hosts. Surface these connections to
+  catch lateral movement post-compromise.
+tactics:
+  - LateralMovement
+  - Discovery
+relevantTechniques:
+  - T1021.001
+  - T1021.004
+requiredDataConnectors:
+  - connectorId: MicrosoftThreatProtection
+    dataTypes:
+      - DeviceNetworkEvents
+      - DeviceInfo
+query: |
+  let workstations =
+    DeviceInfo
+    | where TimeGenerated > ago(7d)
+    | summarize arg_max(TimeGenerated, *) by DeviceId
+    | where DeviceType == "Workstation"
+    | project DeviceId, DeviceName;
+  DeviceNetworkEvents
+  | where TimeGenerated > ago(24h)
+  | where RemotePort in (22, 3389)
+  | where RemoteIPType == "Private"
+  | join kind=inner workstations on DeviceId
+  | summarize Connections = count(), Targets = make_set(RemoteIP, 25),
+              Procs = make_set(InitiatingProcessFileName, 5)
+            by DeviceName, AccountName, RemotePort, bin(TimeGenerated, 1h)
+  | where Connections >= 1
+version: 1.0.0

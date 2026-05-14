@@ -1,0 +1,47 @@
+id: 8a9d3f0c-1b2e-4d6a-9c11-7f4e0c2b8a04
+name: Entra ID - Service Principal Credential Added
+description: |
+  Detects "Update application - Certificates and secrets management" or
+  "Add service principal credentials" operations. SP credential additions are
+  a known persistence mechanism (Midnight Blizzard / NOBELIUM TTP) — once an
+  attacker has Application Admin rights they add a new client secret to a
+  legitimate enterprise app and use it as a persistent backdoor that survives
+  password resets.
+severity: High
+status: Available
+requiredDataConnectors:
+  - connectorId: AzureActiveDirectory
+    dataTypes:
+      - AuditLogs
+queryFrequency: 1h
+queryPeriod: 1h
+triggerOperator: gt
+triggerThreshold: 0
+tactics:
+  - Persistence
+  - PrivilegeEscalation
+relevantTechniques:
+  - T1098.001
+query: |
+  AuditLogs
+  | where OperationName in (
+      "Update application - Certificates and secrets management",
+      "Add service principal credentials",
+      "Update application – Certificates and secrets management"
+    )
+  | extend Actor = tostring(InitiatedBy.user.userPrincipalName)
+  | extend ActorApp = tostring(InitiatedBy.app.displayName)
+  | extend TargetApp = tostring(TargetResources[0].displayName)
+  | extend TargetId = tostring(TargetResources[0].id)
+  | project TimeGenerated, OperationName, Actor, ActorApp, TargetApp, TargetId,
+            Result, AdditionalDetails
+entityMappings:
+  - entityType: Account
+    fieldMappings:
+      - identifier: FullName
+        columnName: Actor
+  - entityType: CloudApplication
+    fieldMappings:
+      - identifier: Name
+        columnName: TargetApp
+version: 1.0.0

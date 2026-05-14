@@ -1,0 +1,54 @@
+id: 8a9d3f0c-1b2e-4d6a-9c11-7f4e0c2b8a05
+name: M365 - Suspicious Inbox Rule (Forward / Delete)
+description: |
+  Detects creation of inbox rules that auto-forward to external recipients,
+  move messages to RSS / Conversation History / Deleted Items, or match
+  attacker-style keywords (invoice, payment, wire, password, OTP). Classic
+  BEC persistence — attacker creates a hidden rule that quarantines security
+  notifications from the inbox of a compromised user.
+severity: High
+status: Available
+requiredDataConnectors:
+  - connectorId: Office365
+    dataTypes:
+      - OfficeActivity
+queryFrequency: 1h
+queryPeriod: 1h
+triggerOperator: gt
+triggerThreshold: 0
+tactics:
+  - Collection
+  - Exfiltration
+  - DefenseEvasion
+relevantTechniques:
+  - T1114.003
+  - T1564.008
+query: |
+  let suspicious_folders = dynamic(["RSS Feeds","RSS Subscriptions","Conversation History","Deleted Items","Junk Email","Archive"]);
+  let suspicious_keywords = dynamic(["invoice","payment","wire","bank","password","otp","mfa","security","reset"]);
+  OfficeActivity
+  | where Operation in ("New-InboxRule","Set-InboxRule","UpdateInboxRules")
+  | extend Params = tostring(Parameters)
+  | extend ForwardTo = extract(@"ForwardTo[\s\S]*?'([^']+)'", 1, Params)
+  | extend ForwardAsAttachment = extract(@"ForwardAsAttachmentTo[\s\S]*?'([^']+)'", 1, Params)
+  | extend RedirectTo = extract(@"RedirectTo[\s\S]*?'([^']+)'", 1, Params)
+  | extend MoveToFolder = extract(@"MoveToFolder[\s\S]*?'([^']+)'", 1, Params)
+  | extend SubjectContains = extract(@"SubjectContainsWords[\s\S]*?'([^']+)'", 1, Params)
+  | extend ExternalForward = ForwardTo has "@" and ForwardTo !contains tostring(split(UserId,"@")[1])
+  | where ExternalForward
+       or isnotempty(RedirectTo)
+       or isnotempty(ForwardAsAttachment)
+       or MoveToFolder in (suspicious_folders)
+       or SubjectContains has_any (suspicious_keywords)
+  | project TimeGenerated, UserId, ClientIP, Operation, ForwardTo, RedirectTo,
+            ForwardAsAttachment, MoveToFolder, SubjectContains, Parameters
+entityMappings:
+  - entityType: Account
+    fieldMappings:
+      - identifier: FullName
+        columnName: UserId
+  - entityType: IP
+    fieldMappings:
+      - identifier: Address
+        columnName: ClientIP
+version: 1.0.0

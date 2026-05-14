@@ -1,0 +1,29 @@
+id: 9b1a4e0d-2c3f-4e7b-8d22-8f5e1d3c9b05
+name: HUN - Sign-In From Hosting / Datacenter ASN
+description: |
+  Hypothesis - Legitimate users rarely sign in from VPS / hosting providers.
+  Surface successful sign-ins whose IP belongs to a well-known datacenter ASN
+  (Digital Ocean, OVH, Hetzner, Vultr, Linode, AWS, Azure, GCP, Choopa,
+  ColoCrossing). Useful for catching residential-proxy bypass + VPS-hosted
+  AiTM landings.
+tactics:
+  - InitialAccess
+  - DefenseEvasion
+relevantTechniques:
+  - T1078.004
+  - T1090.003
+requiredDataConnectors:
+  - connectorId: AzureActiveDirectory
+    dataTypes:
+      - SigninLogs
+query: |
+  let dc_asns = dynamic([14061, 16276, 24940, 20473, 63949, 16509, 8075, 15169,
+                        20454, 36352, 53667, 51852, 199524, 14618, 396982]);
+  SigninLogs
+  | where TimeGenerated > ago(24h)
+  | where ResultType == 0
+  | where AutonomousSystemNumber in (dc_asns)
+  | where AppDisplayName !in ("Azure Portal","Microsoft Azure CLI","Microsoft Azure PowerShell")
+  | project TimeGenerated, UserPrincipalName, IPAddress, AutonomousSystemNumber,
+            Location, AppDisplayName, UserAgent
+version: 1.0.0

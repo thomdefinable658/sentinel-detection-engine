@@ -1,0 +1,33 @@
+id: 9b1a4e0d-2c3f-4e7b-8d22-8f5e1d3c9b08
+name: HUN - Guest User Added To Privileged Role / Group
+description: |
+  Hypothesis - Cross-tenant attacks (post-Storm-0558, Midnight Blizzard) often
+  pivot via guest invitations. Surface every guest (UPN contains #EXT#) added
+  to a privileged role, group, or owners list in the last 14 days.
+tactics:
+  - PrivilegeEscalation
+  - Persistence
+relevantTechniques:
+  - T1098.003
+  - T1136.003
+requiredDataConnectors:
+  - connectorId: AzureActiveDirectory
+    dataTypes:
+      - AuditLogs
+query: |
+  let privileged = dynamic(["Global Administrator","Privileged Role Administrator","Application Administrator","Cloud Application Administrator","Exchange Administrator","SharePoint Administrator","Security Administrator","User Administrator","Helpdesk Administrator","Conditional Access Administrator"]);
+  AuditLogs
+  | where TimeGenerated > ago(14d)
+  | where OperationName in ("Add member to role","Add owner to group","Add member to group")
+  | mv-expand t = TargetResources
+  | extend TargetUPN = tostring(t.userPrincipalName)
+  | extend TargetType = tostring(t.type)
+  | extend ModProps = t.modifiedProperties
+  | mv-expand mp = ModProps
+  | extend Prop = tostring(mp.displayName), NewValue = tostring(mp.newValue)
+  | extend RoleName = iff(Prop == "Role.DisplayName", replace_regex(NewValue, @"^\[\""|\""\]$", ""), "")
+  | where TargetUPN has "#EXT#"
+       or (Prop == "Role.DisplayName" and NewValue has_any (privileged))
+  | extend Actor = tostring(InitiatedBy.user.userPrincipalName)
+  | project TimeGenerated, Actor, OperationName, TargetUPN, RoleName
+version: 1.0.0

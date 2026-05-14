@@ -1,0 +1,53 @@
+id: 8a9d3f0c-1b2e-4d6a-9c11-7f4e0c2b8a07
+name: M365 - Suspicious OAuth Consent to Unverified Publisher
+description: |
+  Detects user-granted OAuth consent to an application from a non-verified
+  publisher that requests high-risk scopes (Mail.Read, Mail.ReadWrite,
+  Files.ReadWrite.All, offline_access). Illicit-consent grant phishing
+  (e.g. PerfectData, eM Client lookalikes) is the dominant 2025-26 BEC vector.
+severity: High
+status: Available
+requiredDataConnectors:
+  - connectorId: AzureActiveDirectory
+    dataTypes:
+      - AuditLogs
+queryFrequency: 1h
+queryPeriod: 1h
+triggerOperator: gt
+triggerThreshold: 0
+tactics:
+  - InitialAccess
+  - Persistence
+relevantTechniques:
+  - T1528
+  - T1098.001
+query: |
+  let high_risk_scopes = dynamic([
+    "Mail.Read","Mail.ReadWrite","Mail.Send","MailboxSettings.ReadWrite",
+    "Files.Read.All","Files.ReadWrite.All","Sites.ReadWrite.All",
+    "offline_access","User.Read.All","Directory.Read.All","Contacts.Read"
+  ]);
+  AuditLogs
+  | where OperationName == "Consent to application"
+  | extend Actor = tostring(InitiatedBy.user.userPrincipalName)
+  | extend AppName = tostring(TargetResources[0].displayName)
+  | extend AppId = tostring(TargetResources[0].id)
+  | mv-expand mod = TargetResources[0].modifiedProperties
+  | extend PropName = tostring(mod.displayName), NewValue = tostring(mod.newValue)
+  | where PropName == "ConsentAction.Permissions"
+  | extend Scopes = NewValue
+  | extend IsAdminConsent = NewValue has "AdminConsent=True"
+  | extend ScopeHits = countof(tolower(Scopes), tolower(strcat_array(high_risk_scopes, ",")))
+  | where Scopes has_any (high_risk_scopes)
+  | extend VerifiedPublisher = tostring(parse_json(tostring(AdditionalDetails))[0].value)
+  | project TimeGenerated, Actor, AppName, AppId, IsAdminConsent, Scopes, VerifiedPublisher
+entityMappings:
+  - entityType: Account
+    fieldMappings:
+      - identifier: FullName
+        columnName: Actor
+  - entityType: CloudApplication
+    fieldMappings:
+      - identifier: Name
+        columnName: AppName
+version: 1.0.0

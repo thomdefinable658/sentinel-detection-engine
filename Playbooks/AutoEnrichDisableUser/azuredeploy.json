@@ -1,0 +1,191 @@
+{
+  "$schema": "https://schema.management.azure.com/schemas/2019-04-01/deploymentTemplate.json#",
+  "contentVersion": "1.0.0.0",
+  "metadata": {
+    "title": "AutoEnrichDisableUser",
+    "description": "Sentinel playbook: enrich incident entities with VirusTotal + AbuseIPDB; if high-confidence malicious, disable the Entra ID user and add an incident comment with the verdict.",
+    "prerequisites": "VirusTotal API key, AbuseIPDB API key, MicrosoftGraphSecurity + AzureAD connectors authorised.",
+    "lastUpdateTime": "2026-05-14",
+    "author": { "name": "Sandeep Mothukuri" },
+    "support": { "tier": "Community" }
+  },
+  "parameters": {
+    "PlaybookName": {
+      "type": "string",
+      "defaultValue": "AutoEnrichDisableUser",
+      "metadata": { "description": "Name of the Logic App / Playbook resource." }
+    },
+    "VTConnectionName":  { "type": "string", "defaultValue": "virustotal" },
+    "AbuseIPDBConnectionName": { "type": "string", "defaultValue": "abuseipdb" },
+    "SentinelConnectionName":  { "type": "string", "defaultValue": "azuresentinel" },
+    "AADConnectionName":       { "type": "string", "defaultValue": "azuread" },
+    "DisableUserConfidenceThreshold": {
+      "type": "int",
+      "defaultValue": 80,
+      "metadata": { "description": "Minimum combined VT+AbuseIPDB confidence (0-100) required to disable the user." }
+    }
+  },
+  "variables": {
+    "VTConnId":   "[resourceId('Microsoft.Web/connections', parameters('VTConnectionName'))]",
+    "AIPConnId":  "[resourceId('Microsoft.Web/connections', parameters('AbuseIPDBConnectionName'))]",
+    "SentConnId": "[resourceId('Microsoft.Web/connections', parameters('SentinelConnectionName'))]",
+    "AADConnId":  "[resourceId('Microsoft.Web/connections', parameters('AADConnectionName'))]"
+  },
+  "resources": [
+    {
+      "type": "Microsoft.Logic/workflows",
+      "apiVersion": "2019-05-01",
+      "name": "[parameters('PlaybookName')]",
+      "location": "[resourceGroup().location]",
+      "tags": { "hidden-SentinelTemplateName": "AutoEnrichDisableUser", "hidden-SentinelTemplateVersion": "1.0.0" },
+      "properties": {
+        "state": "Enabled",
+        "definition": {
+          "$schema": "https://schema.management.azure.com/providers/Microsoft.Logic/schemas/2016-06-01/workflowdefinition.json#",
+          "contentVersion": "1.0.0.0",
+          "parameters": {
+            "$connections": { "defaultValue": {}, "type": "Object" },
+            "DisableUserConfidenceThreshold": {
+              "defaultValue": "[parameters('DisableUserConfidenceThreshold')]",
+              "type": "Int"
+            }
+          },
+          "triggers": {
+            "Microsoft_Sentinel_incident": {
+              "type": "ApiConnectionWebhook",
+              "inputs": {
+                "body": { "callback_url": "@listCallbackUrl()" },
+                "host": { "connection": { "name": "@parameters('$connections')['azuresentinel']['connectionId']" } },
+                "path": "/incident-creation"
+              }
+            }
+          },
+          "actions": {
+            "Entities_-_Get_IPs": {
+              "type": "ApiConnection",
+              "inputs": {
+                "body": "@triggerBody()?['object']?['properties']?['relatedEntities']",
+                "host": { "connection": { "name": "@parameters('$connections')['azuresentinel']['connectionId']" } },
+                "method": "post",
+                "path": "/entities/ip"
+              }
+            },
+            "Entities_-_Get_Accounts": {
+              "runAfter": { "Entities_-_Get_IPs": ["Succeeded"] },
+              "type": "ApiConnection",
+              "inputs": {
+                "body": "@triggerBody()?['object']?['properties']?['relatedEntities']",
+                "host": { "connection": { "name": "@parameters('$connections')['azuresentinel']['connectionId']" } },
+                "method": "post",
+                "path": "/entities/account"
+              }
+            },
+            "Init_MaxConfidence": {
+              "runAfter": { "Entities_-_Get_Accounts": ["Succeeded"] },
+              "type": "InitializeVariable",
+              "inputs": { "variables": [{ "name": "MaxConfidence", "type": "integer", "value": 0 }] }
+            },
+            "For_each_IP": {
+              "runAfter": { "Init_MaxConfidence": ["Succeeded"] },
+              "type": "Foreach",
+              "foreach": "@body('Entities_-_Get_IPs')?['IPs']",
+              "actions": {
+                "VT_-_IP_Report": {
+                  "type": "ApiConnection",
+                  "inputs": {
+                    "host": { "connection": { "name": "@parameters('$connections')['virustotal']['connectionId']" } },
+                    "method": "get",
+                    "path": "/api/v3/ip_addresses/@{encodeURIComponent(items('For_each_IP')?['Address'])}"
+                  }
+                },
+                "AbuseIPDB_-_Check": {
+                  "runAfter": { "VT_-_IP_Report": ["Succeeded","Failed","TimedOut"] },
+                  "type": "ApiConnection",
+                  "inputs": {
+                    "host": { "connection": { "name": "@parameters('$connections')['abuseipdb']['connectionId']" } },
+                    "method": "get",
+                    "path": "/api/v2/check",
+                    "queries": { "ipAddress": "@items('For_each_IP')?['Address']", "maxAgeInDays": "90" }
+                  }
+                },
+                "Update_MaxConfidence": {
+                  "runAfter": { "AbuseIPDB_-_Check": ["Succeeded","Failed","TimedOut"] },
+                  "type": "SetVariable",
+                  "inputs": {
+                    "name": "MaxConfidence",
+                    "value": "@max(variables('MaxConfidence'), coalesce(body('AbuseIPDB_-_Check')?['data']?['abuseConfidenceScore'], 0))"
+                  }
+                }
+              }
+            },
+            "Condition_-_High_Confidence": {
+              "runAfter": { "For_each_IP": ["Succeeded"] },
+              "type": "If",
+              "expression": {
+                "and": [
+                  { "greaterOrEquals": ["@variables('MaxConfidence')", "@parameters('DisableUserConfidenceThreshold')"] }
+                ]
+              },
+              "actions": {
+                "For_each_Account": {
+                  "type": "Foreach",
+                  "foreach": "@body('Entities_-_Get_Accounts')?['Accounts']",
+                  "actions": {
+                    "AAD_-_Disable_User": {
+                      "type": "ApiConnection",
+                      "inputs": {
+                        "host": { "connection": { "name": "@parameters('$connections')['azuread']['connectionId']" } },
+                        "method": "patch",
+                        "path": "/v1.0/users/@{encodeURIComponent(items('For_each_Account')?['AadUserId'])}",
+                        "body": { "accountEnabled": false }
+                      }
+                    }
+                  }
+                },
+                "Add_Comment_-_Action_Taken": {
+                  "runAfter": { "For_each_Account": ["Succeeded","Failed"] },
+                  "type": "ApiConnection",
+                  "inputs": {
+                    "host": { "connection": { "name": "@parameters('$connections')['azuresentinel']['connectionId']" } },
+                    "method": "post",
+                    "path": "/Incidents/Comment",
+                    "body": {
+                      "incidentArmId": "@triggerBody()?['object']?['id']",
+                      "message": "Auto-action: disabled affected user account(s). Max IP reputation confidence: @{variables('MaxConfidence')}. Threshold: @{parameters('DisableUserConfidenceThreshold')}."
+                    }
+                  }
+                }
+              },
+              "else": {
+                "actions": {
+                  "Add_Comment_-_No_Action": {
+                    "type": "ApiConnection",
+                    "inputs": {
+                      "host": { "connection": { "name": "@parameters('$connections')['azuresentinel']['connectionId']" } },
+                      "method": "post",
+                      "path": "/Incidents/Comment",
+                      "body": {
+                        "incidentArmId": "@triggerBody()?['object']?['id']",
+                        "message": "Enriched IPs. Max confidence @{variables('MaxConfidence')} below threshold @{parameters('DisableUserConfidenceThreshold')}; no auto-action taken."
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          }
+        },
+        "parameters": {
+          "$connections": {
+            "value": {
+              "azuresentinel": { "id": "[concat('/subscriptions/', subscription().subscriptionId, '/providers/Microsoft.Web/locations/', resourceGroup().location, '/managedApis/azuresentinel')]", "connectionId": "[variables('SentConnId')]", "connectionName": "azuresentinel" },
+              "azuread":       { "id": "[concat('/subscriptions/', subscription().subscriptionId, '/providers/Microsoft.Web/locations/', resourceGroup().location, '/managedApis/azuread')]",       "connectionId": "[variables('AADConnId')]",  "connectionName": "azuread" },
+              "virustotal":    { "id": "[concat('/subscriptions/', subscription().subscriptionId, '/providers/Microsoft.Web/locations/', resourceGroup().location, '/managedApis/virustotal')]",    "connectionId": "[variables('VTConnId')]",   "connectionName": "virustotal" },
+              "abuseipdb":     { "id": "[concat('/subscriptions/', subscription().subscriptionId, '/providers/Microsoft.Web/locations/', resourceGroup().location, '/managedApis/abuseipdb')]",     "connectionId": "[variables('AIPConnId')]",  "connectionName": "abuseipdb" }
+            }
+          }
+        }
+      }
+    }
+  ]
+}

@@ -1,0 +1,30 @@
+id: 9b1a4e0d-2c3f-4e7b-8d22-8f5e1d3c9b03
+name: HUN - Mailbox Forwarding to External Domain
+description: |
+  Hypothesis - BEC actors set mailbox-level forwarding (Set-Mailbox
+  -ForwardingSmtpAddress) to silently mirror inbound mail to an attacker
+  address. Surface every change in 14 days where the destination domain
+  differs from the tenant's primary domains.
+tactics:
+  - Collection
+  - Exfiltration
+relevantTechniques:
+  - T1114.003
+requiredDataConnectors:
+  - connectorId: Office365
+    dataTypes:
+      - OfficeActivity
+query: |
+  OfficeActivity
+  | where TimeGenerated > ago(14d)
+  | where Operation in ("Set-Mailbox","Set-ForwardingAddress")
+  | extend Params = tostring(Parameters)
+  | extend ForwardSmtp = extract(@"ForwardingSmtpAddress[\s\S]*?'(?:smtp:)?([^']+)'", 1, Params)
+  | extend ForwardAddr = extract(@"ForwardingAddress[\s\S]*?'([^']+)'", 1, Params)
+  | extend Target = coalesce(ForwardSmtp, ForwardAddr)
+  | where isnotempty(Target)
+  | extend TargetDomain = tolower(tostring(split(Target,"@")[1]))
+  | extend UserDomain = tolower(tostring(split(UserId,"@")[1]))
+  | where TargetDomain != UserDomain and isnotempty(TargetDomain)
+  | project TimeGenerated, UserId, Target, TargetDomain, ClientIP, Operation
+version: 1.0.0

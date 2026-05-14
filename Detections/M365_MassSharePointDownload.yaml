@@ -1,0 +1,49 @@
+id: 8a9d3f0c-1b2e-4d6a-9c11-7f4e0c2b8a06
+name: M365 - Mass SharePoint / OneDrive Download
+description: |
+  Detects users downloading > 200 files within 1 hour from SharePoint or OneDrive,
+  with comparison to the user's 30-day baseline (mean + 3*stdev). Catches insider
+  data theft and post-compromise smash-and-grab exfiltration.
+severity: Medium
+status: Available
+requiredDataConnectors:
+  - connectorId: Office365
+    dataTypes:
+      - OfficeActivity
+queryFrequency: 1h
+queryPeriod: 30d
+triggerOperator: gt
+triggerThreshold: 0
+tactics:
+  - Collection
+  - Exfiltration
+relevantTechniques:
+  - T1213.002
+  - T1567.002
+query: |
+  let lookback = 30d;
+  let recent = 1h;
+  let abs_threshold = 200;
+  let baseline =
+    OfficeActivity
+    | where TimeGenerated between (ago(lookback) .. ago(recent))
+    | where Operation in ("FileDownloaded","FileSyncDownloadedFull")
+    | summarize HourlyCount = count() by UserId, bin(TimeGenerated, 1h)
+    | summarize MeanHourly = avg(HourlyCount), StdevHourly = stdev(HourlyCount) by UserId;
+  OfficeActivity
+  | where TimeGenerated > ago(recent)
+  | where Operation in ("FileDownloaded","FileSyncDownloadedFull")
+  | summarize Downloads = count(), Files = make_set(OfficeObjectId, 50), IPs = make_set(ClientIP, 10)
+            by UserId
+  | where Downloads >= abs_threshold
+  | join kind=leftouter baseline on UserId
+  | extend AnomalyScore = iff(StdevHourly > 0, (todouble(Downloads) - MeanHourly) / StdevHourly, 99.0)
+  | where AnomalyScore > 3.0 or isnull(MeanHourly)
+  | project TimeGenerated = now(), UserId, Downloads, MeanHourly, StdevHourly,
+            AnomalyScore, IPs, Files
+entityMappings:
+  - entityType: Account
+    fieldMappings:
+      - identifier: FullName
+        columnName: UserId
+version: 1.0.0

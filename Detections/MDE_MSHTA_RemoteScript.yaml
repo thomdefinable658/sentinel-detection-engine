@@ -1,0 +1,42 @@
+id: 8a9d3f0c-1b2e-4d6a-9c11-7f4e0c2b8a09
+name: MDE - mshta Executing Remote Script
+description: |
+  Detects mshta.exe invoked with an http(s):// URL, javascript:, or vbscript:
+  prefix. Used by trojanised LNK / ISO / OneNote payloads to fetch and execute
+  remote HTAs without writing to disk.
+severity: High
+status: Available
+requiredDataConnectors:
+  - connectorId: MicrosoftThreatProtection
+    dataTypes:
+      - DeviceProcessEvents
+queryFrequency: 1h
+queryPeriod: 1h
+triggerOperator: gt
+triggerThreshold: 0
+tactics:
+  - DefenseEvasion
+  - Execution
+relevantTechniques:
+  - T1218.005
+query: |
+  DeviceProcessEvents
+  | where FileName =~ "mshta.exe"
+  | where ProcessCommandLine matches regex @"(?i)(https?://|javascript:|vbscript:|about:)"
+  | extend ParentFile = tostring(InitiatingProcessFileName)
+  | project TimeGenerated, DeviceName, AccountName, ProcessCommandLine,
+            ParentFile, InitiatingProcessCommandLine, FolderPath
+entityMappings:
+  - entityType: Host
+    fieldMappings:
+      - identifier: HostName
+        columnName: DeviceName
+  - entityType: Account
+    fieldMappings:
+      - identifier: Name
+        columnName: AccountName
+  - entityType: Process
+    fieldMappings:
+      - identifier: CommandLine
+        columnName: ProcessCommandLine
+version: 1.0.0

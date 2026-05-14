@@ -1,0 +1,28 @@
+id: 9b1a4e0d-2c3f-4e7b-8d22-8f5e1d3c9b09
+name: HUN - DNS Queries to Free / Dynamic / Tunneling TLDs
+description: |
+  Hypothesis - Free dynamic-DNS providers (duckdns.org, no-ip.com, dynu, dnsexit)
+  and abused new-gTLDs (.xyz, .top, .click, .tk, .gq, .cf, .ml, .icu) are
+  over-represented in commodity-malware C2. Surface every endpoint DNS query
+  matching this list, then triage by parent process.
+tactics:
+  - CommandAndControl
+relevantTechniques:
+  - T1071.004
+  - T1568.002
+requiredDataConnectors:
+  - connectorId: MicrosoftThreatProtection
+    dataTypes:
+      - DeviceNetworkEvents
+query: |
+  let bad_tlds = dynamic([".xyz",".top",".click",".tk",".gq",".cf",".ml",".icu",".rest",".country",".buzz",".cyou"]);
+  let dyn_dns = dynamic(["duckdns.org","no-ip.com","no-ip.org","ddns.net","hopto.org","zapto.org","dynu.net","dnsexit.com","sytes.net","myftp.org","servehttp.com"]);
+  DeviceNetworkEvents
+  | where TimeGenerated > ago(24h)
+  | where ActionType in ("ConnectionSuccess","DnsConnectionInspected","ConnectionAttempt")
+  | where isnotempty(RemoteUrl)
+  | extend host = tolower(tostring(RemoteUrl))
+  | where host has_any (dyn_dns) or host endswith_cs any (bad_tlds)
+  | project TimeGenerated, DeviceName, AccountName, host, RemoteIP,
+            InitiatingProcessFileName, InitiatingProcessCommandLine
+version: 1.0.0

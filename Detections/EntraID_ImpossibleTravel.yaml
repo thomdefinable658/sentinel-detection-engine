@@ -1,0 +1,55 @@
+id: 8a9d3f0c-1b2e-4d6a-9c11-7f4e0c2b8a01
+name: Entra ID - Impossible Travel Between Sign-Ins
+description: |
+  Detects two successful interactive sign-ins for the same user from locations
+  whose great-circle distance cannot be plausibly traversed in the elapsed time
+  (default threshold: > 800 km/h between events). High-confidence indicator of
+  session token theft, AiTM phishing, or shared credentials.
+severity: High
+status: Available
+requiredDataConnectors:
+  - connectorId: AzureActiveDirectory
+    dataTypes:
+      - SigninLogs
+queryFrequency: 1h
+queryPeriod: 6h
+triggerOperator: gt
+triggerThreshold: 0
+tactics:
+  - InitialAccess
+  - CredentialAccess
+relevantTechniques:
+  - T1078.004
+  - T1539
+query: |
+  let lookback = 6h;
+  let velocity_kmh_threshold = 800.0;
+  SigninLogs
+  | where TimeGenerated > ago(lookback)
+  | where ResultType == 0
+  | where AuthenticationRequirement == "singleFactorAuthentication" or AuthenticationRequirement == "multiFactorAuthentication"
+  | extend City = tostring(LocationDetails.city), Country = tostring(LocationDetails.countryOrRegion)
+  | extend Lat = todouble(LocationDetails.geoCoordinates.latitude)
+  | extend Lon = todouble(LocationDetails.geoCoordinates.longitude)
+  | where isnotempty(Lat) and isnotempty(Lon)
+  | sort by UserPrincipalName asc, TimeGenerated asc
+  | extend PrevTime = prev(TimeGenerated), PrevUser = prev(UserPrincipalName)
+  | extend PrevLat = prev(Lat), PrevLon = prev(Lon), PrevCity = prev(City), PrevCountry = prev(Country)
+  | where UserPrincipalName == PrevUser
+  | extend DeltaMin = datetime_diff('minute', TimeGenerated, PrevTime)
+  | where DeltaMin > 0 and DeltaMin < 720
+  | extend DistanceKm = geo_distance_2points(PrevLon, PrevLat, Lon, Lat) / 1000.0
+  | extend VelocityKmh = DistanceKm / (DeltaMin / 60.0)
+  | where VelocityKmh > velocity_kmh_threshold and DistanceKm > 500
+  | project TimeGenerated, UserPrincipalName, IPAddress, AppDisplayName,
+            PrevCity, PrevCountry, City, Country, DistanceKm, DeltaMin, VelocityKmh
+entityMappings:
+  - entityType: Account
+    fieldMappings:
+      - identifier: FullName
+        columnName: UserPrincipalName
+  - entityType: IP
+    fieldMappings:
+      - identifier: Address
+        columnName: IPAddress
+version: 1.0.0

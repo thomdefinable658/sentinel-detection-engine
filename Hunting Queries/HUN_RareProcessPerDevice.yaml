@@ -1,0 +1,31 @@
+id: 9b1a4e0d-2c3f-4e7b-8d22-8f5e1d3c9b02
+name: HUN - Rare Process Per Device (org-wide rarity)
+description: |
+  Hypothesis - A binary that runs on exactly 1 device estate-wide is either a
+  developer toolchain leak, niche LOB software, or attacker tooling. Surface
+  process executions where the SHA1 has been seen on <= 2 devices in the last
+  14 days.
+tactics:
+  - Execution
+  - DefenseEvasion
+relevantTechniques:
+  - T1059
+  - T1027
+requiredDataConnectors:
+  - connectorId: MicrosoftThreatProtection
+    dataTypes:
+      - DeviceProcessEvents
+query: |
+  let lookback = 14d;
+  DeviceProcessEvents
+  | where TimeGenerated > ago(lookback)
+  | where isnotempty(SHA1)
+  | summarize Devices = dcount(DeviceId), DeviceNames = make_set(DeviceName, 5),
+              FirstSeen = min(TimeGenerated), LastSeen = max(TimeGenerated),
+              SampleCmd = any(ProcessCommandLine), Folder = any(FolderPath)
+            by SHA1, FileName
+  | where Devices <= 2
+  | where Folder !startswith @"C:\Program Files"
+       and Folder !startswith @"C:\Windows\WinSxS"
+  | sort by LastSeen desc
+version: 1.0.0

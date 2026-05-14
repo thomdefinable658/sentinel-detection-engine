@@ -1,0 +1,27 @@
+id: 9b1a4e0d-2c3f-4e7b-8d22-8f5e1d3c9b04
+name: HUN - Unsigned Binary Execution From Temp/AppData
+description: |
+  Hypothesis - Loader stagers (IcedID, Pikabot, Latrodectus) drop unsigned PE
+  files to %TEMP% or %APPDATA% and run them. Surface executions where the
+  process binary is unsigned and lives under those paths.
+tactics:
+  - Execution
+  - DefenseEvasion
+relevantTechniques:
+  - T1204.002
+  - T1027
+requiredDataConnectors:
+  - connectorId: MicrosoftThreatProtection
+    dataTypes:
+      - DeviceProcessEvents
+query: |
+  DeviceProcessEvents
+  | where TimeGenerated > ago(24h)
+  | where FolderPath matches regex @"(?i)\\(AppData\\(Local|Roaming)\\Temp|Users\\[^\\]+\\AppData|Windows\\Temp)\\"
+  | where FileName endswith ".exe" or FileName endswith ".dll" or FileName endswith ".scr"
+  | extend Signed = tostring(parse_json(tostring(AdditionalFields)).IsSigned)
+  | where isempty(Signed) or Signed == "False" or Signed == "false"
+  | project TimeGenerated, DeviceName, AccountName, FileName, FolderPath,
+            SHA256, ProcessCommandLine, InitiatingProcessFileName,
+            InitiatingProcessCommandLine
+version: 1.0.0
