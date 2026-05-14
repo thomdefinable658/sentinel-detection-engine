@@ -31,7 +31,7 @@ jobs:
       - name: Pack rules into release archive
         run: |
           mkdir -p dist
-          tar czf dist/sentinel-hunt-pack-${GITHUB_REF_NAME}.tar.gz \
+          tar czf dist/sentinel-detection-engine-${GITHUB_REF_NAME}.tar.gz \
             Detections \
             'Hunting Queries' \
             Workbooks \
@@ -41,7 +41,7 @@ jobs:
             tests/atomics.md \
             README.md \
             LICENSE
-          (cd dist && sha256sum sentinel-hunt-pack-${GITHUB_REF_NAME}.tar.gz > sentinel-hunt-pack-${GITHUB_REF_NAME}.sha256)
+          (cd dist && sha256sum sentinel-detection-engine-${GITHUB_REF_NAME}.tar.gz > sentinel-detection-engine-${GITHUB_REF_NAME}.sha256)
 
       - name: Generate changelog from commits
         id: changelog
@@ -71,5 +71,5 @@ jobs:
         with:
           body_path: CHANGELOG_RELEASE.md
           files: |
-            dist/sentinel-hunt-pack-*.tar.gz
-            dist/sentinel-hunt-pack-*.sha256
+            dist/sentinel-detection-engine-*.tar.gz
+            dist/sentinel-detection-engine-*.sha256

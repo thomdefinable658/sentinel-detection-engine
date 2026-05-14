@@ -1,11 +1,11 @@
-# sentinel-hunt-pack
+# sentinel-detection-engine
 
 > Detection-as-code for **Microsoft Sentinel** — 12 analytic rules, 10 hunting queries, an L3 triage workbook, a Logic App playbook, ATT&CK Navigator coverage, and Atomic Red Team validation mapping. Every rule is CI-validated.
 
 **Author:** Sandeep Mothukuri — SOC L3 / Incident Response
-**Repo:** [`sandeepmothukuri/sentinel-hunt-pack`](https://github.com/sandeepmothukuri/sentinel-hunt-pack)
+**Repo:** [`sandeepmothukuri/sentinel-detection-engine`](https://github.com/sandeepmothukuri/sentinel-detection-engine)
 
-[![validate](https://github.com/sandeepmothukuri/sentinel-hunt-pack/actions/workflows/validate.yml/badge.svg)](https://github.com/sandeepmothukuri/sentinel-hunt-pack/actions/workflows/validate.yml)
+[![validate](https://github.com/sandeepmothukuri/sentinel-detection-engine/actions/workflows/validate.yml/badge.svg)](https://github.com/sandeepmothukuri/sentinel-detection-engine/actions/workflows/validate.yml)
 ![rules](https://img.shields.io/badge/rules-12_analytics_%2B_10_hunts-2776d6)
 ![attack](https://img.shields.io/badge/ATT%26CK-31_techniques_%2F_11_tactics-ff5a72)
 ![sentinel](https://img.shields.io/badge/Microsoft-Sentinel-0078d4)
@@ -156,7 +156,7 @@ T1059.001 (PowerShell)  →  MDE_PowerShell_EncodedCommand.yaml  →  Atomic Tes
 ## Repo layout
 
 ```
-sentinel-hunt-pack/
+sentinel-detection-engine/
 ├── Detections/                 # 12 analytic rules (Sentinel YAML schema)
 ├── Hunting Queries/            # 10 hunts
 ├── Workbooks/

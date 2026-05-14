@@ -4,7 +4,7 @@
     {
       "type": 1,
       "content": {
-        "json": "# L3 Triage Dashboard\nIncident funnel, top entities, ATT&CK coverage, and detection performance across the last 24 hours.\n\n*Author: Sandeep Mothukuri — part of [sentinel-hunt-pack](https://github.com/sandeepmothukuri/sentinel-hunt-pack)*"
+        "json": "# L3 Triage Dashboard\nIncident funnel, top entities, ATT&CK coverage, and detection performance across the last 24 hours.\n\n*Author: Sandeep Mothukuri — part of [sentinel-detection-engine](https://github.com/sandeepmothukuri/sentinel-detection-engine)*"
       },
       "name": "Header"
     },

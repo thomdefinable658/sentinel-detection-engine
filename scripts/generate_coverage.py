@@ -118,10 +118,10 @@ def write_navigator_layer(rules: list[dict]) -> None:
             "enabled": True,
         })
     layer = {
-        "name": "sentinel-hunt-pack coverage",
+        "name": "sentinel-detection-engine coverage",
         "versions": {"attack": "14", "navigator": "4.9.1", "layer": "4.5"},
         "domain": "enterprise-attack",
-        "description": "ATT&CK coverage produced by github.com/sandeepmothukuri/sentinel-hunt-pack",
+        "description": "ATT&CK coverage produced by github.com/sandeepmothukuri/sentinel-detection-engine",
         "techniques": techniques,
         "gradient": {
             "colors": ["#dde4ee", "#2776d6", "#0d3a76"],

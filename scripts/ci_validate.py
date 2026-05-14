@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """
-CI validation for sentinel-hunt-pack rules.
+CI validation for sentinel-detection-engine rules.
 
 Checks every YAML under Detections/ and Hunting Queries/:
   1. Required fields are present (id, name, description, query, tactics, relevantTechniques).

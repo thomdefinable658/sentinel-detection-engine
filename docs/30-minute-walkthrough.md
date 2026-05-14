@@ -97,18 +97,18 @@ Sentinel → **Data connectors** with at least 4 green "Connected" rows.
 
 ### 3.1  Push the repo to your GitHub
 
-On your local machine (PowerShell, in `C:\Users\sande\Downloads\sentinel-hunt-pack`):
+On your local machine (PowerShell, in `C:\Users\sande\Downloads\sentinel-detection-engine`):
 
 ```powershell
 gh auth login          # if not already
-gh repo create sentinel-hunt-pack --public --source=. --push --description "Detection-as-code for Microsoft Sentinel"
+gh repo create sentinel-detection-engine --public --source=. --push --description "Detection-as-code for Microsoft Sentinel"
 ```
 
 ### 3.2  Connect Sentinel to the GitHub repo (GitOps)
 
 1. Sentinel → **Repositories** (left nav, under Configuration)
 2. **Add new** → **GitHub** → authorise
-3. Repository: `sandeepmothukuri/sentinel-hunt-pack`
+3. Repository: `sandeepmothukuri/sentinel-detection-engine`
 4. Branch: `main`
 5. Content types: leave defaults (Analytic rules, Hunting queries, Workbooks, Playbooks)
 6. **Add**
@@ -211,7 +211,7 @@ Sentinel → **Workbooks** → **My workbooks** → **L3 Triage Dashboard** → 
 ## Phase 6 — Stash screenshots + update README (2 min)
 
 ```powershell
-cd C:\Users\sande\Downloads\sentinel-hunt-pack
+cd C:\Users\sande\Downloads\sentinel-detection-engine
 # drop the 7 PNGs into docs/images/
 git add docs/images/*.png
 git commit -m "Add real Sentinel + Navigator screenshots from lab deployment"

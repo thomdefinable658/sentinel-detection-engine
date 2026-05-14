@@ -68,7 +68,7 @@ Then Sentinel → **Data connectors** → for each, click **Open connector page*
 
 ## Step 6 — Deploy this rule pack via Sentinel Repositories
 
-1. Push this repo to **your** GitHub account: `https://github.com/sandeepmothukuri/sentinel-hunt-pack`
+1. Push this repo to **your** GitHub account: `https://github.com/sandeepmothukuri/sentinel-detection-engine`
 2. Sentinel → **Repositories** → **Add new** → GitHub → authorise → select the repo
 3. Branch: `main` → Save
 4. Sentinel pulls the YAML files; within ~5 min you should see all 12 analytic rules + 10 hunting queries + 1 workbook in the portal
